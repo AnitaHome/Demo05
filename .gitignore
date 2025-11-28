@@ -1,0 +1,43 @@
+# .NET build
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
+*.sln.iml
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test results
+TestResults/
+
+# npm & node
+node_modules/
+
+# Others
+*.vspscc
+*.vssscc
+*.pdb
+*.mdb
+*.dbmdl
+*.bak
+*.swp
+*.tmp
+*.cache
+
+# Local secrets
+appsettings.Development.json

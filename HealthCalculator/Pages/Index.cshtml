@@ -1,0 +1,205 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "首頁";
+}
+
+<div class="text-center">
+    <h1 class="display-4">健康計算器</h1>
+    <p>計算您的 BMI、BMR 和 TDEE。</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <form id="healthForm">
+            <div class="mb-3">
+                <label for="gender" class="form-label">性別</label>
+                <select class="form-select" id="gender">
+                    <option value="">選擇性別</option>
+                    <option value="Male">男</option>
+                    <option value="Female">女</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="age" class="form-label">年齡</label>
+                <input type="number" class="form-control" id="age" placeholder="歲">
+            </div>
+            <div class="mb-3">
+                <label for="height" class="form-label">身高 (cm)</label>
+                <input type="number" class="form-control" id="height" placeholder="cm">
+            </div>
+            <div class="mb-3">
+                <label for="weight" class="form-label">體重 (kg)</label>
+                <input type="number" class="form-control" id="weight" placeholder="kg">
+            </div>
+            <div class="mb-3">
+                <label for="activityLevel" class="form-label">活動量</label>
+                <select class="form-select" id="activityLevel">
+                    <option value="">選擇活動量</option>
+                    <option value="Sedentary">久坐 (很少或無運動)</option>
+                    <option value="LightlyActive">輕度活動 (每週運動 1-3 天)</option>
+                    <option value="ModeratelyActive">中度活動 (每週運動 3-5 天)</option>
+                    <option value="VeryActive">高度活動 (每週運動 6-7 天)</option>
+                    <option value="ExtraActive">超高度活動 (每天重度運動或勞力工作)</option>
+                </select>
+            </div>
+
+            <div class="d-grid gap-2 d-md-block">
+                <button type="button" class="btn btn-primary" id="btnBmi" disabled>計算 BMI</button>
+                <button type="button" class="btn btn-success" id="btnBmr" disabled>計算 BMR</button>
+                <button type="button" class="btn btn-info" id="btnTdee" disabled>計算 TDEE</button>
+            </div>
+        </form>
+
+        <div class="mt-4" id="resultArea" style="display:none;">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">計算結果</h5>
+                    <p class="card-text" id="resultText"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('healthForm');
+            const gender = document.getElementById('gender');
+            const age = document.getElementById('age');
+            const height = document.getElementById('height');
+            const weight = document.getElementById('weight');
+            const activityLevel = document.getElementById('activityLevel');
+            
+            const btnBmi = document.getElementById('btnBmi');
+            const btnBmr = document.getElementById('btnBmr');
+            const btnTdee = document.getElementById('btnTdee');
+            
+            const resultArea = document.getElementById('resultArea');
+            const resultText = document.getElementById('resultText');
+
+            // Load data from localStorage
+            loadData();
+
+            // Input event listeners
+            form.addEventListener('input', updateButtons);
+
+            // Button click listeners
+            btnBmi.addEventListener('click', calculateBmi);
+            btnBmr.addEventListener('click', calculateBmr);
+            btnTdee.addEventListener('click', calculateTdee);
+
+            function updateButtons() {
+                const h = height.value;
+                const w = weight.value;
+                const g = gender.value;
+                const a = age.value;
+                const al = activityLevel.value;
+
+                // BMI: Height, Weight
+                btnBmi.disabled = !(h && w);
+
+                // BMR: Gender, Age, Height, Weight
+                btnBmr.disabled = !(g && a && h && w);
+
+                // TDEE: Gender, Age, Height, Weight, ActivityLevel
+                btnTdee.disabled = !(g && a && h && w && al);
+            }
+
+            function saveData() {
+                const data = {
+                    gender: gender.value,
+                    age: age.value,
+                    height: height.value,
+                    weight: weight.value,
+                    activityLevel: activityLevel.value
+                };
+                localStorage.setItem('healthData', JSON.stringify(data));
+            }
+
+            function loadData() {
+                const dataString = localStorage.getItem('healthData');
+                if (dataString) {
+                    const data = JSON.parse(dataString);
+                    if (data.gender) gender.value = data.gender;
+                    if (data.age) age.value = data.age;
+                    if (data.height) height.value = data.height;
+                    if (data.weight) weight.value = data.weight;
+                    if (data.activityLevel) activityLevel.value = data.activityLevel;
+                    updateButtons();
+                }
+            }
+
+            async function calculateBmi() {
+                saveData();
+                try {
+                    const response = await fetch('/health/bmi', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            height: parseFloat(height.value),
+                            weight: parseFloat(weight.value)
+                        })
+                    });
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const data = await response.json();
+                    showResult(`BMI: ${data.bmi} (${data.status})`);
+                } catch (error) {
+                    console.error('Error:', error);
+                    showResult('計算 BMI 時發生錯誤');
+                }
+            }
+
+            async function calculateBmr() {
+                saveData();
+                try {
+                    const response = await fetch('/health/bmr', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            gender: gender.value,
+                            age: parseInt(age.value),
+                            height: parseFloat(height.value),
+                            weight: parseFloat(weight.value)
+                        })
+                    });
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const data = await response.json();
+                    showResult(`BMR: ${data.bmr} kcal/day`);
+                } catch (error) {
+                    console.error('Error:', error);
+                    showResult('計算 BMR 時發生錯誤');
+                }
+            }
+
+            async function calculateTdee() {
+                saveData();
+                try {
+                    const response = await fetch('/health/tdee', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            gender: gender.value,
+                            age: parseInt(age.value),
+                            height: parseFloat(height.value),
+                            weight: parseFloat(weight.value),
+                            activityLevel: activityLevel.value
+                        })
+                    });
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const data = await response.json();
+                    showResult(`TDEE: ${data.tdee} kcal/day`);
+                } catch (error) {
+                    console.error('Error:', error);
+                    showResult('計算 TDEE 時發生錯誤');
+                }
+            }
+
+            function showResult(text) {
+                resultText.textContent = text;
+                resultArea.style.display = 'block';
+            }
+        });
+    </script>
+}
